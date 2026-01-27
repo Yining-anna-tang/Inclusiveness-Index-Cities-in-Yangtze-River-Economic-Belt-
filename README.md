@@ -13,7 +13,7 @@ All variables and city names are provided in **English**, following standard aca
   - `year`: Year
 
 ## Indicators
-The dataset includes **17 indicators (x1–x17)** with corresponding standardized values and scores:
+The dataset includes **17 Secondary indicators (Meso) (x1–x17)** with corresponding standardized values and scores:
 - `x1`–`x17`: Raw indicator values  
 - `sx1`–`sx17`: Min–max standardized indicators  
 - `w1`–`w17`: Indicator weights  
