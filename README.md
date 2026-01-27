@@ -27,7 +27,7 @@ A composite score is also provided:
 - Indicator construction and standardization follow a consistent structure across all years.
 
 ## Usage
-The dataset is provided in CSV format and can be directly used in:
+The dataset is provided in xlsx format and can be directly used in:
 - Python (pandas)
 - R
 - Stata
