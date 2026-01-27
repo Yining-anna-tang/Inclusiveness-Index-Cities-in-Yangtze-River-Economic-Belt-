@@ -4,7 +4,7 @@ from pathlib import Path
 
 # Paths
 in_path = Path("de030ab5-146c-46e7-a20f-9306d75df44c.xlsx")  # update if needed
-out_path = Path("city_list_EN.xlsx")
+out_path = Path("city_list.xlsx")
 
 # Load data
 df = pd.read_excel(in_path)
