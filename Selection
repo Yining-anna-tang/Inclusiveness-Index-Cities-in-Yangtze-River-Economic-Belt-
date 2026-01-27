@@ -1,0 +1,93 @@
+import pandas as pd
+import numpy as np
+from pathlib import Path
+
+# Paths
+in_path = Path("de030ab5-146c-46e7-a20f-9306d75df44c.xlsx")  # update if needed
+out_path = Path("city_list_EN.xlsx")
+
+# Load data
+df = pd.read_excel(in_path)
+
+# ------------------------------------------------------------
+# 1) Filter cities in the Yangtze River Economic Belt (YREB)
+# Official 11 provincial-level regions (GB/T 2260 first two digits):
+# Shanghai 31, Jiangsu 32, Zhejiang 33, Anhui 34, Jiangxi 36,
+# Hubei 42, Hunan 43, Chongqing 50, Sichuan 51, Guizhou 52, Yunnan 53
+# ------------------------------------------------------------
+yreb_prov_codes = {31, 32, 33, 34, 36, 42, 43, 50, 51, 52, 53}
+
+df["id"] = pd.to_numeric(df["id"], errors="coerce")
+df["prov_code"] = (df["id"] // 10000).astype("Int64")
+
+yreb_df = df[df["prov_code"].isin(yreb_prov_codes)].copy()
+
+# ------------------------------------------------------------
+# 2) Build a city-level composite score for ranking
+# If an existing score/index column is present, use it; otherwise,
+# create a composite score by min–max normalizing indicators and averaging.
+# ------------------------------------------------------------
+existing_score_aliases = {"score", "index", "composite", "综合得分", "得分", "指数"}
+candidate_score_cols = [c for c in yreb_df.columns if c.lower() in existing_score_aliases]
+use_existing = candidate_score_cols[0] if candidate_score_cols else None
+
+exclude_cols = {"id", "year", "prov_code", "city"}
+num_cols = [
+    c for c in yreb_df.columns
+    if c not in exclude_cols and pd.api.types.is_numeric_dtype(yreb_df[c])
+]
+
+if use_existing:
+    # City_score = mean over years of the existing score column
+    city_score = (
+        yreb_df.groupby(["id", "city"], as_index=False)[use_existing]
+        .mean()
+        .rename(columns={use_existing: "city_score"})
+    )
+else:
+    # Min–max normalize each indicator across all YREB rows (panel),
+    # then compute a row-level mean score, and finally average across years per city.
+    X = yreb_df[num_cols].copy()
+    mins = X.min(axis=0)
+    maxs = X.max(axis=0)
+    denom = (maxs - mins).replace(0, np.nan)
+
+    X_norm = (X - mins) / denom
+    yreb_df["row_score"] = X_norm.mean(axis=1, skipna=True)
+
+    city_score = (
+        yreb_df.groupby(["id", "city"], as_index=False)["row_score"]
+        .mean()
+        .rename(columns={"row_score": "city_score"})
+    )
+
+# ------------------------------------------------------------
+# 3) Rank and select Top 110 cities
+# Note: In this dataset, the YREB subsample contains exactly 110 unique cities,
+# so Top 110 equals the full YREB city list.
+# ------------------------------------------------------------
+city_score = city_score.sort_values("city_score", ascending=False).reset_index(drop=True)
+top110 = city_score.head(110).copy()
+top110.insert(0, "rank", np.arange(1, len(top110) + 1))
+
+# Add an English remarks column for documentation
+remarks = (
+    "Defined as a YREB city under the official 11-province classification. "
+    "City_score is computed as the across-year mean of min–max normalized indicators."
+    if not use_existing
+    else
+    "Defined as a YREB city under the official 11-province classification. "
+    "City_score is computed as the across-year mean of the existing score/index column."
+)
+top110["remarks"] = remarks
+
+# ------------------------------------------------------------
+# 4) Export (English sheet names and column labels)
+# ------------------------------------------------------------
+with pd.ExcelWriter(out_path, engine="openpyxl") as writer:
+    city_score.to_excel(writer, index=False, sheet_name="YREB_all_cities_ranked")
+    top110.to_excel(writer, index=False, sheet_name="YREB_top110")
+
+print("All cities in dataset:", df["city"].nunique())
+print("YREB cities in dataset:", city_score.shape[0])
+print("Saved to:", out_path.resolve())
