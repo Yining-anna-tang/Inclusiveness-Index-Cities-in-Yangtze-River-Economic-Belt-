@@ -1,4 +1,4 @@
-# Inclusiveness-Index-Cities-in-Yangtze-River-Economic-Belt-
+# Inclusiveness-Index-Cities-in-Yangtze-River-Economic-Belt
 # City-Level Panel Dataset (2008–2019)
 ## Overview
 This dataset contains a balanced city–year panel for Chinese cities from **2008 to 2019**.
